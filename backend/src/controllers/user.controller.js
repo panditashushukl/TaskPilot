@@ -3,6 +3,7 @@ import {ApiError} from "../utils/ApiError.js"
 import {User} from "../models/user.models.js"
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
+import jwt from "jsonwebtoken"
 
 const generateAccessAndRefreshTokens = async (userId) =>{
   try {
@@ -10,6 +11,7 @@ const generateAccessAndRefreshTokens = async (userId) =>{
     const accessToken = user.generateAccessToken()
     const refreshToken = user.generateRefreshToken()
     
+    // Always override the refresh token to ensure no old tokens remain
     user.refreshToken = refreshToken
     await user.save({validateBeforeSave: false})
 
@@ -133,31 +135,40 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new ApiError(401, "Invalid Password")
   }
 
+  // Always generate new tokens and override existing ones
   const {accessToken,refreshToken} = await generateAccessAndRefreshTokens(user._id)
 
   const loggedInUser = await User.findById(user._id).select("-password -refreshToken")
 
   const options = {
-    httpOnly : true,
-    secure : true
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days for refresh token
+  }
+
+  const accessTokenOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 15 * 60 * 1000 // 15 minutes for access token
   }
 
   return res
   .status(200)
-  .cookie("accessToken", accessToken, options)
-  .cookie("refreshToken",refreshToken, options)
+  .cookie("accessToken", accessToken, accessTokenOptions)
+  .cookie("refreshToken", refreshToken, options)
   .json(
     new ApiResponse(
       200,
       {
-        user:loggedInUser,
-        accessToken,
-        refreshToken
+        user: loggedInUser
       },
       "User logged In Successfully"
     )
   )
-
+  console.log("User is Looged in Successfully");
+  
 })
 
 /*
@@ -180,7 +191,8 @@ const loggedOutUser = asyncHandler(async (req,res) => {
 
   const options = {
     httpOnly: true,
-    secure: true
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict'
   }
 
   return res
@@ -294,10 +306,79 @@ const deleteUser = asyncHandler(async (req, res) => {
   )
 })
 
+// Refresh access token
+const refreshAccessToken = asyncHandler(async (req, res) => {
+  const incomingRefreshToken = req.cookies.refreshToken
+
+  if (!incomingRefreshToken) {
+    throw new ApiError(401, "Unauthorized request")
+  }
+
+  try {
+    const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET)
+
+    const user = await User.findById(decodedToken?._id)
+
+    if (!user) {
+      throw new ApiError(401, "Invalid refresh token")
+    }
+
+    if (incomingRefreshToken !== user?.refreshToken) {
+      throw new ApiError(401, "Refresh token is expired or used")
+    }
+
+    // Always generate new tokens and override existing ones
+    const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(user._id)
+
+    const options = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days for refresh token
+    }
+
+    const accessTokenOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 15 * 60 * 1000 // 15 minutes for access token
+    }
+
+    return res
+      .status(200)
+      .cookie("accessToken", accessToken, accessTokenOptions)
+      .cookie("refreshToken", refreshToken, options)
+      .json(
+        new ApiResponse(
+          200,
+          {},
+          "Access token refreshed"
+        )
+      )
+  } catch (error) {
+    throw new ApiError(401, error?.message || "Invalid refresh token")
+  }
+})
+
+// Get current user
+const getCurrentUser = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id).select("-password -refreshToken")
+
+  if (!user) {
+    throw new ApiError(404, "User not found")
+  }
+
+  return res.status(200).json(
+    new ApiResponse(200, user, "Current user retrieved successfully")
+  )
+})
+
 export {
   registerUser,
   loginUser,
   loggedOutUser,
+  refreshAccessToken,
+  getCurrentUser,
   getAllUsers,
   getUserById,
   updateUser,

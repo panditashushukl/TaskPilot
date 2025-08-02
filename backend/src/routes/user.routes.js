@@ -5,6 +5,8 @@ import {
   registerUser,
   loginUser,
   loggedOutUser,
+  refreshAccessToken,
+  getCurrentUser,
   getAllUsers,
   getUserById,
   updateUser,
@@ -29,11 +31,13 @@ router.route("/register").post(
 )
 
 router.route("/login").post(loginUser)
+router.route("/refresh-token").post(refreshAccessToken)
 
 // Protected routes
 router.use(verifyJWT)
 
 router.route("/logout").post(loggedOutUser)
+router.route("/me").get(getCurrentUser)
 
 // User CRUD operations (admin only for some operations)
 router.route("/")

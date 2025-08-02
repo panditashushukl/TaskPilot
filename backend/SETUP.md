@@ -1,289 +1,377 @@
-# TaskPilot API Setup Guide
+# Backend Setup Guide
 
-## Prerequisites
+## 📋 Prerequisites
 
-- Node.js (v16 or higher)
-- MongoDB (v4.4 or higher)
-- Cloudinary account for file uploads
+Before setting up the backend, ensure you have the following installed:
 
-## Installation
+- **Node.js** (v18 or higher) - [Download here](https://nodejs.org/)
+- **MongoDB** (v6 or higher) - [Download here](https://www.mongodb.com/try/download/community)
+- **Git** - [Download here](https://git-scm.com/)
 
-1. **Clone the repository**
+## 🚀 Installation
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/panditashushukl/TaskPilot.git
+cd TaskPilot/backend
+```
+
+### 2. Install Dependencies
+
+```bash
+npm install
+```
+
+### 3. Environment Configuration
+
+Create a `.env` file in the backend root directory:
+
+```bash
+# Copy the example environment file
+cp .env.example .env
+```
+
+Or create a new `.env` file with the following variables:
+
+```env
+# Server Configuration
+PORT=8000
+NODE_ENV=development
+
+# Database Configuration
+MONGODB_URI=mongodb://localhost:27017/taskpilot
+
+# JWT Configuration
+ACCESS_TOKEN_SECRET=your_access_token_secret_here
+REFRESH_TOKEN_SECRET=your_refresh_token_secret_here
+ACCESS_TOKEN_EXPIRY=1d
+REFRESH_TOKEN_EXPIRY=10d
+
+# Cloudinary Configuration
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+
+# CORS Configuration
+CORS_ORIGIN=http://localhost:5173,http://localhost:3000
+```
+
+### 4. Database Setup
+
+#### Option A: Local MongoDB
+
+1. Start MongoDB service:
    ```bash
-   git clone <repository-url>
-   cd TaskPilot/backend
+   # Windows
+   net start MongoDB
+   
+   # macOS/Linux
+   sudo systemctl start mongod
    ```
 
-2. **Install dependencies**
+2. Create database:
    ```bash
-   npm install
+   mongosh
+   use taskpilot
    ```
 
-3. **Environment Configuration**
-   
-   Create a `.env` file in the backend directory with the following variables:
-   
-   ```env
-   # Server Configuration
-   PORT=8000
-   NODE_ENV=development
-   
-   # Database Configuration
-   MONGODB_URI=mongodb://localhost:27017/taskpilot
-   
-   # JWT Configuration
-   ACCESS_TOKEN_SECRET=your_access_token_secret_here
-   REFRESH_TOKEN_SECRET=your_refresh_token_secret_here
-   ACCESS_TOKEN_EXPIRY=1d
-   REFRESH_TOKEN_EXPIRY=10d
-   
-   # Cloudinary Configuration
-   CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
-   CLOUDINARY_API_KEY=your_cloudinary_api_key
-   CLOUDINARY_API_SECRET=your_cloudinary_api_secret
-   
-   # CORS Configuration
-   CORS_ORIGIN=http://localhost:3000
-   ```
+#### Option B: MongoDB Atlas (Cloud)
 
-4. **Cloudinary Setup**
-   
-   - Sign up at [Cloudinary](https://cloudinary.com/)
-   - Get your cloud name, API key, and API secret from the dashboard
-   - Update the `.env` file with your Cloudinary credentials
+1. Create a free account at [MongoDB Atlas](https://www.mongodb.com/atlas)
+2. Create a new cluster
+3. Get your connection string
+4. Update `MONGODB_URI` in your `.env` file
 
-5. **MongoDB Setup**
-   
-   - Install MongoDB locally or use MongoDB Atlas
-   - Create a database named `taskpilot`
-   - Update the `MONGODB_URI` in your `.env` file
+### 5. Cloudinary Setup
 
-6. **Start the server**
-   ```bash
-   npm run dev
-   ```
+1. Create a free account at [Cloudinary](https://cloudinary.com/)
+2. Get your credentials from the dashboard
+3. Update the Cloudinary variables in your `.env` file
 
-   The server will start on `http://localhost:8000`
+## 🏃‍♂️ Running the Application
 
-## API Endpoints
+### Development Mode
 
-### Base URL
-```
-http://localhost:8000/api/v1
-```
-
-### Health Check
-```
-GET /health
-```
-
-### Authentication
-All protected endpoints require a JWT token in the Authorization header:
-```
-Authorization: Bearer <your-jwt-token>
-```
-
-## Testing the API
-
-### 1. Health Check
-```bash
-curl http://localhost:8000/api/v1/health
-```
-
-### 2. Register a User
-```bash
-curl -X POST http://localhost:8000/api/v1/users/register \
-  -F "fullName=ShuklaJi" \
-  -F "email=shukla@example.com" \
-  -F "username=shuklaji" \
-  -F "password=Password123!" \
-  -F "avtar=@/path/to/avatar.jpg"
-```
-
-### 3. Login
-```bash
-curl -X POST http://localhost:8000/api/v1/users/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "shukla@example.com",
-    "username": "shuklaji",
-    "password": "Password123!"
-  }'
-```
-
-### 4. Create a Task
-```bash
-curl -X POST http://localhost:8000/api/v1/tasks \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Complete Project Documentation",
-    "description": "Write comprehensive documentation for the new feature",
-    "status": "pending",
-    "priority": "high",
-    "dueDate": "2024-01-15T10:00:00.000Z",
-    "assignedTo": "USER_ID"
-  }'
-```
-
-### 5. Get All Tasks
-```bash
-curl -X GET "http://localhost:8000/api/v1/tasks?page=1&limit=10" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-```
-
-### 6. Upload Document to Task
-```bash
-curl -X POST http://localhost:8000/api/v1/tasks/TASK_ID/documents \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -F "document=@/path/to/document.pdf"
-```
-
-## Database Schema
-
-### User Model
-```javascript
-{
-  username: String (unique, required),
-  email: String (unique, required),
-  fullName: String (required),
-  avtar: String (Cloudinary URL, required),
-  password: String (hashed, required),
-  refreshToken: String,
-  role: String (default: "user"),
-  tasks: [ObjectId] (references to Task model)
-}
-```
-
-### Task Model
-```javascript
-{
-  assignedTo: ObjectId (references User model, required),
-  title: String (required, indexed),
-  description: String (required),
-  status: String (enum: ["pending", "in_progress", "completed"], default: "pending"),
-  priority: String (enum: ["low", "medium", "high"], default: "medium"),
-  dueDate: Date (required),
-  documents: [String] (Cloudinary URLs)
-}
-```
-
-## Features Implemented
-
-### ✅ User Management
-- User registration with avatar upload
-- User login/logout with JWT tokens
-- User CRUD operations (admin only for delete)
-- Role-based access control (user/admin)
-- Password hashing with bcrypt
-
-### ✅ Task Management
-- Complete CRUD operations for tasks
-- Task assignment to users
-- Status tracking (pending, in_progress, completed)
-- Priority levels (low, medium, high)
-- Due date management
-
-### ✅ Advanced Features
-- **Filtering**: By status, priority, assigned user, search terms
-- **Sorting**: By any field in ascending/descending order
-- **Pagination**: Configurable page size and navigation
-- **Search**: Full-text search in task titles and descriptions
-
-### ✅ File Management
-- Document upload to tasks using Cloudinary
-- Document removal from tasks
-- Document information retrieval
-- Secure document download URLs
-- Support for multiple file types
-
-### ✅ Security & Authorization
-- JWT-based authentication
-- Role-based access control
-- Input validation and sanitization
-- Secure file upload handling
-- CORS configuration
-
-### ✅ API Features
-- RESTful design principles
-- Consistent error handling
-- Standardized response format
-- Health check endpoint
-- Comprehensive API documentation
-
-## Error Handling
-
-The API returns consistent error responses:
-
-```json
-{
-  "statusCode": 400,
-  "message": "Error message",
-  "success": false,
-  "errors": [
-    {
-      "field": "email",
-      "message": "Invalid email format"
-    }
-  ]
-}
-```
-
-## Common HTTP Status Codes
-
-- `200`: Success
-- `201`: Created
-- `400`: Bad Request
-- `401`: Unauthorized
-- `403`: Forbidden
-- `404`: Not Found
-- `409`: Conflict
-- `500`: Internal Server Error
-
-## Development
-
-### Running in Development Mode
 ```bash
 npm run dev
 ```
 
-### Running Tests
+This will start the server with nodemon for automatic restarts on file changes.
+
+### Production Mode
+
 ```bash
-npm test
+npm start
 ```
 
-### Code Formatting
+### Build for Production
+
 ```bash
-npm run format
+npm run build
 ```
 
-## Production Deployment
+## 📁 Project Structure
 
-1. Set `NODE_ENV=production` in your environment
-2. Use a production MongoDB instance
-3. Configure proper CORS origins
-4. Use strong JWT secrets
-5. Set up proper logging
-6. Configure reverse proxy (nginx) if needed
+```
+backend/
+├── src/
+│   ├── controllers/          # Request handlers
+│   │   ├── user.controller.js
+│   │   ├── task.controller.js
+│   │   └── document.controller.js
+│   ├── models/              # Database models
+│   │   ├── user.models.js
+│   │   └── tasks.models.js
+│   ├── routes/              # API routes
+│   │   ├── user.routes.js
+│   │   ├── task.routes.js
+│   │   └── document.routes.js
+│   ├── middlewares/         # Custom middlewares
+│   │   ├── auth.middleware.js
+│   │   └── multer.middleware.js
+│   ├── utils/               # Utility functions
+│   │   ├── ApiError.js
+│   │   ├── ApiResponse.js
+│   │   ├── asyncHandler.js
+│   │   └── cloudinary.js
+│   ├── db/                  # Database configuration
+│   │   └── index.js
+│   ├── constants.js         # Application constants
+│   ├── app.js              # Express app configuration
+│   └── index.js            # Server entry point
+├── public/                 # Static files
+├── package.json
+└── .env                    # Environment variables
+```
 
-## Troubleshooting
+## 🔧 API Documentation
+
+### Authentication Endpoints
+
+#### Register User
+```http
+POST /api/v1/users/register
+Content-Type: application/json
+
+{
+  "username": "john_doe",
+  "email": "john@example.com",
+  "fullName": "John Doe",
+  "password": "password123",
+  "avatar": "data:image/jpeg;base64,..."
+}
+```
+
+#### Login User
+```http
+POST /api/v1/users/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "password123"
+}
+```
+
+#### Get Current User
+```http
+GET /api/v1/users/current-user
+Authorization: Bearer <access_token>
+```
+
+### Task Endpoints
+
+#### Get All Tasks
+```http
+GET /api/v1/tasks?status=pending&priority=high&page=1&limit=10
+Authorization: Bearer <access_token>
+```
+
+#### Create Task
+```http
+POST /api/v1/tasks
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{
+  "title": "Complete project documentation",
+  "description": "Write comprehensive documentation for the project",
+  "assignedTo": "user_id",
+  "priority": "high",
+  "dueDate": "2024-12-31T23:59:59.000Z"
+}
+```
+
+#### Update Task
+```http
+PATCH /api/v1/tasks/:taskId
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{
+  "status": "in_progress",
+  "description": "Updated description"
+}
+```
+
+### Document Endpoints
+
+#### Upload Document
+```http
+POST /api/v1/documents/upload
+Authorization: Bearer <access_token>
+Content-Type: multipart/form-data
+
+file: <file_data>
+```
+
+## 🔒 Security Features
+
+### Authentication
+- JWT-based authentication with access and refresh tokens
+- Password hashing with bcrypt
+- Token expiration and refresh mechanism
+
+### Authorization
+- Role-based access control
+- Protected routes with middleware
+- User-specific data access
+
+### File Upload Security
+- File type validation
+- File size limits
+- Secure cloud storage with Cloudinary
+
+## 🧪 Testing
+
+### Manual Testing
+
+You can test the API endpoints using tools like:
+- **Postman** - [Download here](https://www.postman.com/)
+- **Insomnia** - [Download here](https://insomnia.rest/)
+- **cURL** - Command line tool
+
+### Example cURL Commands
+
+```bash
+# Register a new user
+curl -X POST http://localhost:8000/api/v1/users/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "testuser",
+    "email": "test@example.com",
+    "fullName": "Test User",
+    "password": "password123"
+  }'
+
+# Login
+curl -X POST http://localhost:8000/api/v1/users/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test@example.com",
+    "password": "password123"
+  }'
+
+# Get tasks (replace <token> with actual token)
+curl -X GET http://localhost:8000/api/v1/tasks \
+  -H "Authorization: Bearer <token>"
+```
+
+## 🐛 Troubleshooting
 
 ### Common Issues
 
-1. **MongoDB Connection Error**
-   - Ensure MongoDB is running
-   - Check your `MONGODB_URI` in `.env`
+#### 1. MongoDB Connection Error
+```
+Error: MongoDB connection failed
+```
+**Solution:**
+- Ensure MongoDB is running
+- Check your `MONGODB_URI` in `.env`
+- Verify network connectivity
 
-2. **Cloudinary Upload Errors**
-   - Verify your Cloudinary credentials
-   - Check file size limits
+#### 2. JWT Token Error
+```
+Error: jwt malformed
+```
+**Solution:**
+- Check your JWT secrets in `.env`
+- Ensure tokens are properly formatted
+- Verify token expiration
 
-3. **JWT Token Issues**
-   - Ensure `ACCESS_TOKEN_SECRET` and `REFRESH_TOKEN_SECRET` are set
-   - Check token expiration settings
+#### 3. Cloudinary Upload Error
+```
+Error: Cloudinary upload failed
+```
+**Solution:**
+- Verify Cloudinary credentials in `.env`
+- Check file size and type restrictions
+- Ensure proper file format
 
-4. **CORS Errors**
-   - Update `CORS_ORIGIN` in `.env` to match your frontend URL
+#### 4. CORS Error
+```
+Error: CORS policy blocked
+```
+**Solution:**
+- Update `CORS_ORIGIN` in `.env`
+- Add your frontend URL to allowed origins
+
+### Debug Mode
+
+Enable debug logging by setting:
+```env
+NODE_ENV=development
+DEBUG=app:*
+```
+
+## 📊 Monitoring
+
+### Health Check
+```http
+GET /api/v1/health
+```
 
 ### Logs
-Check the console output for detailed error messages and debugging information. 
+The application logs important events to the console. In production, consider using:
+- **Winston** for structured logging
+- **Morgan** for HTTP request logging
+- **PM2** for process management
+
+## 🚀 Deployment
+
+### Environment Variables for Production
+
+```env
+NODE_ENV=production
+PORT=8000
+MONGODB_URI=your_production_mongodb_uri
+ACCESS_TOKEN_SECRET=your_secure_access_token_secret
+REFRESH_TOKEN_SECRET=your_secure_refresh_token_secret
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+CORS_ORIGIN=https://yourdomain.com
+```
+
+### Deployment Platforms
+
+- **Heroku**: Easy deployment with Git integration
+- **Railway**: Modern deployment platform
+- **DigitalOcean**: VPS deployment
+- **AWS**: Scalable cloud deployment
+
+## 📚 Additional Resources
+
+- [Express.js Documentation](https://expressjs.com/)
+- [MongoDB Documentation](https://docs.mongodb.com/)
+- [Mongoose Documentation](https://mongoosejs.com/)
+- [JWT Documentation](https://jwt.io/)
+- [Cloudinary Documentation](https://cloudinary.com/documentation)
+
+## 🤝 Support
+
+If you encounter any issues during setup, please:
+1. Check the troubleshooting section above
+2. Review the error logs
+3. Create an issue on GitHub with detailed error information 
